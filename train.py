@@ -3,38 +3,32 @@ import numpy as np
 from datetime import datetime
 
 import torch
-import torch.utils.data
+import torch.utils.data as data
 import torch.optim as optim
 from torchvision import datasets, transforms
 from model import VAE
 
 from torch.utils.tensorboard import SummaryWriter
 
+import my_mnist as mn
+
+# mnist directory
+file_dir = 'C:\\workspace\\dataset\\MNIST\\'
+
 def train():
     # データ読み込み & 変形
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.view(-1))])
-    dataset_train = datasets.MNIST(
-        '~/mnist',
-        train=True,
-        download=True,
-        transform=transform)
-    dataset_valid = datasets.MNIST(
-        '~/mnist',
-        train=False,
-        download=True,
-        transform=transform)
+    images = mn.load_mnist_img(file_dir, mode='train')
+    labels = mn.load_mnist_labels(file_dir, mode='train')
+    onehot_labels = mn.mnist_labels_to_onehot(labels)
+    flat_images = mn.mnist_images_to_vector(images)
 
-    # Dataloader定義
-    dataloader_train = torch.utils.data.DataLoader(dataset_train,
-                                                   batch_size=1000,
-                                                   shuffle=True,
-                                                   num_workers=4)
-    dataloader_valid = torch.utils.data.DataLoader(dataset_valid,
-                                                   batch_size=1000,
-                                                   shuffle=True,
-                                                   num_workers=4)
+    images = torch.from_numpy(flat_images)
+    labels = torch.from_numpy(onehot_labels)
+
+    dataset_train = \
+        data.TensorDataset(images, labels)
+    dataloader_train = \
+        data.DataLoader(dataset=dataset_train, batch_size=1000, shuffle=True, num_workers=4)
 
     # モデル初期設定
     num_epochs = 50
@@ -51,7 +45,6 @@ def train():
     # 学習
     model.train()
 
-    print(type(dataloader_train))
     for i in range(num_epochs):
         losses = []
         for x, t in dataloader_train:
@@ -65,6 +58,7 @@ def train():
             loss_log.append(loss.cpu().detach().numpy())
         print("EPOCH: {} loss: {}".format(i, np.average(losses)))
         writer.add_scalar("train_loss", np.average(losses), i)
+    writer.close()
 
     if not os.path.exists('saved_model'):
         os.makedirs('saved_model')
