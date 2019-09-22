@@ -18,8 +18,6 @@ out_dir = './vae_2'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # modelとloss遷移の保存
-time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-print(time)
 class VAE(nn.Module):
     def __init__(self, z_dim):
         super(VAE, self).__init__()
@@ -45,13 +43,14 @@ class VAE(nn.Module):
     def _decoder(self, z):
         x = F.relu(self.dense_dec1(z))
         x = F.relu(self.dense_dec2(x))
-        x = F.sigmoid(self.dense_dec3(x))
+        x = torch.sigmoid(self.dense_dec3(x))
         return x
 
     def forward(self, x):
         mean, var = self._encoder(x)
         z = self._sample_z(mean, var)
         x = self._decoder(z)
+        return x, z
 
     def loss(self, x):
         mean, var = self._encoder(x)
